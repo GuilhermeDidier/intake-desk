@@ -2,7 +2,7 @@
 // writes that role's connection string to .env.local. Needs the owner's URL in
 // ADMIN_DATABASE_URL (or DATABASE_URL when run with the owner's env file).
 import { randomBytes } from "node:crypto";
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync, existsSync } from "node:fs";
 import { Client } from "pg";
 
 async function main() {
@@ -15,8 +15,12 @@ async function main() {
     await admin.query("drop schema if exists intake cascade");
     console.log("Dropped schema intake");
   }
-  await admin.query(readFileSync("db/schema.sql", "utf8"));
+  // Role first so migrations can grant to it; migrations are idempotent and run in name order.
+  await admin.query("create schema if not exists intake");
   await admin.query(readFileSync("db/role.sql", "utf8"));
+  for (const f of readdirSync("db").filter((f) => /^\d{3}_.*\.sql$/.test(f)).sort()) {
+    await admin.query(readFileSync(`db/${f}`, "utf8"));
+  }
   const password = randomBytes(24).toString("base64url");
   await admin.query(`alter role intake_app password '${password}'`);
   await admin.end();

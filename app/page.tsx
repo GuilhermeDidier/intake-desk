@@ -7,6 +7,9 @@ import { DOC_TYPE_LABEL } from "@/lib/fields";
 import { ROLES, can, currentRole } from "@/lib/roles";
 import s from "./page.module.css";
 
+// Server actions on this page call the model, sometimes more than once.
+export const maxDuration = 120;
+
 export default async function InboxPage({ searchParams }: { searchParams: Promise<{ doc?: string }> }) {
   const { doc } = await searchParams;
   const [items, role] = await Promise.all([inbox(), currentRole()]);
@@ -33,6 +36,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         pages: view.doc.pages,
         body: view.doc.body,
         closed: view.doc.state === "closed",
+        hasPdf: view.doc.has_pdf,
       },
       proposal: view.proposal && {
         id: view.proposal.id,
@@ -68,6 +72,22 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         run: can.runModel(role),
       },
       roleLabel: ROLES[role].label,
+      agent: view.agent && {
+        runId: view.agent.run.id,
+        summary: view.agent.run.summary,
+        steps: view.agent.run.steps,
+        costUsd: Number(view.agent.run.cost_usd),
+        latencyMs: view.agent.run.latency_ms,
+        actions: view.agent.actions.map((a) => ({
+          id: a.id,
+          seq: a.seq,
+          tool: a.tool,
+          input: a.input,
+          status: a.status,
+          result: a.result,
+          decidedBy: a.decided_by,
+        })),
+      },
     };
   }
 
@@ -77,7 +97,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         <div className={s.railHead}>
           <h1>Inbox</h1>
           <Link href="/new" className={s.newDoc}>
-            Paste a document
+            Add a document
           </Link>
         </div>
         <InboxList
@@ -95,7 +115,7 @@ export default async function InboxPage({ searchParams }: { searchParams: Promis
         />
       </aside>
       {data ? (
-        <Workbench key={`${data.doc.id}:${data.proposal?.id ?? 0}`} data={data} />
+        <Workbench key={`${data.doc.id}:${data.proposal?.id ?? 0}:${data.agent?.runId ?? 0}`} data={data} />
       ) : (
         <section className={s.empty}>
           <p>The inbox is empty.</p>

@@ -15,7 +15,11 @@ export type DocRow = {
   body: string;
   is_seed: boolean;
   state: "new" | "proposed" | "closed";
+  has_pdf: boolean;
 };
+
+// Every document column except the original file, which is only loaded when someone opens it.
+const DOC_COLS = `id, slug, channel, sender, received_at, pages, body, is_seed, state, original_pdf is not null as has_pdf`;
 
 export type ProposalRow = {
   id: number;
@@ -62,7 +66,7 @@ export type InboxItem = {
 };
 
 export async function inbox(): Promise<InboxItem[]> {
-  const docs = await q<DocRow>(`select * from intake.documents order by received_at desc, id desc`);
+  const docs = await q<DocRow>(`select ${DOC_COLS} from intake.documents order by received_at desc, id desc`);
   if (docs.length === 0) return [];
   const ids = docs.map((d) => d.id);
   const proposals = await q<ProposalRow & { document_id: number }>(
@@ -75,7 +79,8 @@ export async function inbox(): Promise<InboxItem[]> {
     [ids],
   );
   const tasks = await q<TaskRow & { document_id: number }>(
-    `select distinct on (document_id) * from intake.queue_tasks where document_id = any($1) order by document_id, created_at desc`,
+    `select distinct on (document_id) * from intake.queue_tasks where document_id = any($1) and origin = 'routing'
+     order by document_id, created_at desc`,
     [ids],
   );
 
@@ -97,6 +102,25 @@ export async function inbox(): Promise<InboxItem[]> {
   });
 }
 
+export type AgentRunRow = {
+  id: number;
+  summary: string;
+  steps: { tool: string; input: Record<string, unknown>; output: string }[];
+  cost_usd: string;
+  latency_ms: number;
+  created_at: Date;
+};
+export type AgentActionRow = {
+  id: number;
+  seq: number;
+  tool: string;
+  input: Record<string, unknown>;
+  status: "proposed" | "done" | "dismissed" | "failed";
+  result: Record<string, unknown> | null;
+  decided_by: string | null;
+  decided_at: Date | null;
+};
+
 export type DocumentView = {
   doc: DocRow;
   proposal: ProposalRow | null;
@@ -104,10 +128,13 @@ export type DocumentView = {
   assessment: Assessment | null;
   task: TaskRow | null;
   audit: AuditRow[];
+  agent: { run: AgentRunRow; actions: AgentActionRow[] } | null;
 };
 
+export { DOC_COLS };
+
 export async function documentView(id: number): Promise<DocumentView | null> {
-  const [doc] = await q<DocRow>(`select * from intake.documents where id = $1`, [id]);
+  const [doc] = await q<DocRow>(`select ${DOC_COLS} from intake.documents where id = $1`, [id]);
   if (!doc) return null;
   const [proposal] = await q<ProposalRow>(
     `select * from intake.proposals where document_id = $1 order by created_at desc limit 1`,
@@ -122,10 +149,20 @@ export async function documentView(id: number): Promise<DocumentView | null> {
     : [];
   const edits = new Map(editRows.map((r) => [r.field_key, r.value]));
   const [task] = await q<TaskRow>(
-    `select * from intake.queue_tasks where document_id = $1 order by created_at desc limit 1`,
+    `select * from intake.queue_tasks where document_id = $1 and origin = 'routing' order by created_at desc limit 1`,
     [id],
   );
   const audit = await q<AuditRow>(`select * from intake.audit_log where document_id = $1 order by at, id`, [id]);
+  const [run] = await q<AgentRunRow>(
+    `select id, summary, steps, cost_usd, latency_ms, created_at from intake.agent_runs where document_id = $1 order by created_at desc limit 1`,
+    [id],
+  );
+  const actions = run
+    ? await q<AgentActionRow>(
+        `select id, seq, tool, input, status, result, decided_by, decided_at from intake.agent_actions where run_id = $1 order by seq`,
+        [run.id],
+      )
+    : [];
   return {
     doc,
     proposal: proposal ?? null,
@@ -133,6 +170,7 @@ export async function documentView(id: number): Promise<DocumentView | null> {
     assessment: proposal ? assess(doc, proposal, edits) : null,
     task: task ?? null,
     audit,
+    agent: run ? { run, actions } : null,
   };
 }
 

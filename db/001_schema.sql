@@ -105,3 +105,11 @@ create table if not exists usage_counter (
   n       int not null default 0,
   primary key (bucket, day)
 );
+
+-- What the app role may do. On audit_log it can only read and append.
+grant select, insert, update, delete on
+  intake.sop_sections, intake.documents, intake.proposals,
+  intake.field_edits, intake.queue_tasks, intake.usage_counter
+  to intake_app;
+grant select, insert on intake.audit_log to intake_app;
+grant usage on all sequences in schema intake to intake_app;

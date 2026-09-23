@@ -8,10 +8,11 @@ import type { FieldCheck } from "@/lib/checks";
 import { locate } from "@/lib/checks";
 import type { DocType, FieldKey } from "@/lib/fields";
 import type { Routing } from "@/lib/routing";
+import { NextSteps, type AgentData } from "./NextSteps";
 import s from "./Workbench.module.css";
 
 export type WorkbenchData = {
-  doc: { id: number; channel: "fax" | "portal" | "email"; sender: string; receivedAt: string; pages: number; body: string; closed: boolean };
+  doc: { id: number; channel: "fax" | "portal" | "email"; sender: string; receivedAt: string; pages: number; body: string; closed: boolean; hasPdf: boolean };
   proposal: {
     id: number;
     model: string;
@@ -29,6 +30,7 @@ export type WorkbenchData = {
   audit: { id: number; at: string; actor: string; event: string; detail: Record<string, unknown> }[];
   perms: { route: boolean; routeClinical: boolean; edit: boolean; run: boolean };
   roleLabel: string;
+  agent: AgentData;
 };
 
 const CLINICAL = "__clinical";
@@ -92,6 +94,14 @@ export function Workbench({ data }: { data: WorkbenchData }) {
   return (
     <div className={s.bench} ref={benchRef}>
       <section className={s.paperCol} aria-label="Document">
+        {doc.hasPdf && (
+          <p className={s.pdfNote}>
+            Arrived as a PDF. The assistant transcribed it, and the checks run against that transcription.{" "}
+            <a href={`/documents/${doc.id}/original`} target="_blank" rel="noreferrer">
+              Open the original
+            </a>
+          </p>
+        )}
         <Paper doc={doc} marks={marks} active={active} onHover={setActive} />
         {marks.length > 0 && (
           <p className={s.legend}>
@@ -108,8 +118,9 @@ export function Workbench({ data }: { data: WorkbenchData }) {
 
 function Paper({ doc, marks, active, onHover }: { doc: WorkbenchData["doc"]; marks: Mark[]; active: string | null; onHover: (k: string | null) => void }) {
   const segs = useMemo(() => segments(doc.body, marks), [doc.body, marks]);
-  const header =
-    doc.channel === "fax"
+  const header = doc.hasPdf
+    ? `TRANSCRIBED FROM PDF · ${doc.sender.toUpperCase()} · RECEIVED ${stamp(doc.receivedAt)}`
+    : doc.channel === "fax"
       ? `${stamp(doc.receivedAt)}  FROM: ${doc.sender.toUpperCase()}  P. 1/${doc.pages}`
       : doc.channel === "portal"
         ? `PATIENT PORTAL · RECEIVED ${stamp(doc.receivedAt)}`
@@ -301,6 +312,20 @@ function Reading({ data, active, onFocus }: { data: WorkbenchData; active: strin
         {pending ? "Working…" : message?.text}
       </p>
 
+      <NextSteps
+        documentId={doc.id}
+        agent={data.agent}
+        canPlan={perms.run}
+        canApprove={perms.route}
+        blockedReason={
+          clinical
+            ? "The assistant does not plan actions on clinical content. A triage nurse takes it from here."
+            : assessment.docType === "unclassifiable"
+              ? "Identify the document first. The assistant plans next steps once it knows what the document is."
+              : null
+        }
+      />
+
       <details className={s.provenance}>
         <summary>How this proposal was made</summary>
         <dl>
@@ -407,6 +432,14 @@ function describe(event: string, d: Record<string, unknown>): string {
       return `corrected ${String(d.field).replace(/_/g, " ")}`;
     case "document.routed":
       return `routed it to ${String(d.queue)}${d.overridden ? `, overriding ${String(d.suggested_queue)}` : ""}`;
+    case "agent.planned":
+      return `planned next steps: ${(d.proposed as string[]).length} proposed, ${String(d.rejected)} blocked by the rules`;
+    case "action.approved":
+      return `approved and ran ${String(d.tool).replace(/_/g, " ")}`;
+    case "action.dismissed":
+      return `dismissed ${String(d.tool).replace(/_/g, " ")}`;
+    case "action.blocked":
+      return `tried to run ${String(d.tool).replace(/_/g, " ")}; the rules blocked it`;
     default:
       return event;
   }

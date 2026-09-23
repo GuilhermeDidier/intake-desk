@@ -2,8 +2,10 @@
 // document that has no proposal yet (real model calls, a few cents in total).
 import { DOCUMENTS } from "@/data/documents";
 import { SOPS } from "@/data/sops";
+import { planNextSteps } from "@/lib/agent";
+import { resetCrm } from "@/lib/crm";
 import { q } from "@/lib/db";
-import { audit } from "@/lib/desk";
+import { audit, documentView } from "@/lib/desk";
 import { runAssistant } from "@/lib/ingest";
 
 async function main() {
@@ -34,6 +36,24 @@ async function main() {
   for (const d of pending) {
     const r = await runAssistant(d.id, "assistant");
     console.log(d.slug, r.ok ? "proposed" : r.error);
+  }
+
+  const [{ n: patients }] = await q<{ n: number }>(`select count(*)::int n from intake.crm_patients`);
+  if (patients === 0) {
+    await resetCrm();
+    console.log("CRM patients loaded");
+  }
+
+  // Plan next steps for every seed document the agent may act on, so visitors see a plan without waiting.
+  const unplanned = await q<{ id: number; slug: string }>(
+    `select d.id, d.slug from intake.documents d
+     where d.is_seed and not exists (select 1 from intake.agent_runs r where r.document_id = d.id) order by d.received_at`,
+  );
+  for (const d of unplanned) {
+    const v = await documentView(d.id);
+    if (!v?.assessment || v.assessment.routing.status === "escalated" || v.assessment.docType === "unclassifiable") continue;
+    const r = await planNextSteps(v.doc, v.assessment, "assistant");
+    console.log(d.slug, r.ok ? "planned" : r.error);
   }
   process.exit(0);
 }

@@ -126,3 +126,37 @@ export async function extract(doc: {
 export function costOf(input: number, cacheWrite: number, cacheRead: number, output: number): number {
   return (input * PRICE_IN + cacheWrite * PRICE_IN * 1.25 + cacheRead * PRICE_IN * 0.1 + output * PRICE_OUT) / 1_000_000;
 }
+
+const TRANSCRIBE_SYSTEM = `You transcribe an inbound document for a clinic's intake desk. Output the full text of the document exactly as written, preserving line breaks, labels, blank form lines (as underscores) and the order on the page. Do not summarise, correct, translate or add anything. Mark text you cannot read as [illegible]. Output only the transcription.`;
+
+/** Turns a PDF (typed or scanned) into plain text the checks can verify quotes against. */
+export async function transcribePdf(base64: string): Promise<{ text: string; costUsd: number }> {
+  const response = await client.beta.messages.create({
+    model: MODEL,
+    max_tokens: 16000,
+    betas: ["server-side-fallback-2026-07-01"],
+    fallbacks: "default",
+    thinking: { type: "adaptive" },
+    output_config: { effort: "low" },
+    system: TRANSCRIBE_SYSTEM,
+    messages: [
+      {
+        role: "user",
+        content: [
+          { type: "document", source: { type: "base64", media_type: "application/pdf", data: base64 } },
+          { type: "text", text: "Transcribe this document." },
+        ],
+      },
+    ],
+  });
+  if (response.stop_reason === "refusal") throw new ExtractionError("The model declined to read this PDF.");
+  if (response.stop_reason === "max_tokens") throw new ExtractionError("The PDF is too long for this demo.");
+  const text = response.content
+    .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
+    .map((b) => b.text)
+    .join("")
+    .trim();
+  if (text.length < 20) throw new ExtractionError("No readable text was found in the PDF.");
+  const u = response.usage;
+  return { text, costUsd: costOf(u.input_tokens, u.cache_creation_input_tokens ?? 0, u.cache_read_input_tokens ?? 0, u.output_tokens) };
+}

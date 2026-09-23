@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useState } from "react";
+import { useActionState, useRef, useState } from "react";
 import { submitDocument } from "@/app/actions";
 import s from "./NewDocumentForm.module.css";
 
@@ -71,22 +71,47 @@ export function NewDocumentForm({ allowed }: { allowed: boolean }) {
   const [body, setBody] = useState("");
   const [sender, setSender] = useState("");
   const [channel, setChannel] = useState<string>("fax");
+  const [pdfName, setPdfName] = useState<string | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const loadSampleScan = async () => {
+    const blob = await (await fetch("/sample-referral-scan.pdf")).blob();
+    const file = new File([blob], "sample-referral-scan.pdf", { type: "application/pdf" });
+    const dt = new DataTransfer();
+    dt.items.add(file);
+    if (fileRef.current) fileRef.current.files = dt.files;
+    setPdfName(file.name);
+    setSender("Maplewood Family Health");
+    setChannel("fax");
+    setBody("");
+  };
+  const clearPdf = () => {
+    if (fileRef.current) fileRef.current.value = "";
+    setPdfName(null);
+  };
 
   return (
     <main className={s.wrap}>
       <div className={s.intro}>
-        <h1>Paste a document</h1>
+        <h1>Add a document</h1>
         <p>
-          Paste the text of a fax, portal form or email. The assistant reads it, the rules route it, and it lands in the inbox for a
-          person to approve. Use invented details only: this is a public demo.
+          Upload a PDF, typed or scanned, or paste the text of a fax, portal form or email. The assistant reads it, the rules route
+          it, and it lands in the inbox for a person to approve. Use invented details only: this is a public demo.
         </p>
         <h2>Or start from an example</h2>
         <ul className={s.examples}>
+          <li>
+            <button type="button" onClick={loadSampleScan}>
+              <strong>A scanned referral (PDF)</strong>
+              <span>A slightly crooked scan with a received stamp. The assistant transcribes it first.</span>
+            </button>
+          </li>
           {EXAMPLES.map((e) => (
             <li key={e.name}>
               <button
                 type="button"
                 onClick={() => {
+                  clearPdf();
                   setBody(e.body);
                   setSender(e.sender);
                   setChannel(e.channel);
@@ -115,27 +140,54 @@ export function NewDocumentForm({ allowed }: { allowed: boolean }) {
             <input name="sender" value={sender} onChange={(e) => setSender(e.target.value)} placeholder="Who sent it" maxLength={80} />
           </label>
         </div>
-        <label className={s.sheet}>
-          <span className="sr-only">Document text</span>
-          <textarea
-            name="body"
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder={"REFERRAL\n\nPatient: …\nDOB: …"}
-            rows={20}
-            maxLength={6000}
-            required
+        <div className={s.upload}>
+          <input
+            ref={fileRef}
+            id="pdf"
+            name="pdf"
+            type="file"
+            accept="application/pdf,.pdf"
+            className="sr-only"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              setPdfName(f ? f.name : null);
+              if (f) setBody("");
+            }}
           />
-        </label>
+          {pdfName ? (
+            <p className={s.fileCard}>
+              <span className={s.fileIcon} aria-hidden>PDF</span>
+              <span className={s.fileName}>{pdfName}</span>
+              <button type="button" onClick={clearPdf}>Remove</button>
+            </p>
+          ) : (
+            <label htmlFor="pdf" className={s.drop}>
+              <strong>Upload a PDF</strong> <span>typed or scanned, up to 5 pages and 2 MB</span>
+            </label>
+          )}
+        </div>
+        {!pdfName && (
+          <label className={s.sheet}>
+            <span className={s.or}>or paste the text</span>
+            <textarea
+              name="body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder={"REFERRAL\n\nPatient: …\nDOB: …"}
+              rows={18}
+              maxLength={6000}
+            />
+          </label>
+        )}
         <div className={s.submit}>
           {allowed ? (
-            <button type="submit" disabled={pending || body.trim().length < 40}>
-              {pending ? "The assistant is reading…" : "Send to the intake desk"}
+            <button type="submit" disabled={pending || (!pdfName && body.trim().length < 40)}>
+              {pending ? (pdfName ? "Transcribing and reading… (about 20 seconds)" : "The assistant is reading…") : "Send to the intake desk"}
             </button>
           ) : (
             <p className={s.blocked}>Switch to Intake coordinator or Operations admin to send documents.</p>
           )}
-          <span className={s.count}>{body.length.toLocaleString()} / 6,000</span>
+          {!pdfName && <span className={s.count}>{body.length.toLocaleString()} / 6,000</span>}
         </div>
         {state && !state.ok && (
           <p className={s.error} role="alert">

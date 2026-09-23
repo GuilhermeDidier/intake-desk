@@ -1,10 +1,10 @@
 import { q } from "./db";
-import { assess, audit, type DocRow, type ProposalRow } from "./desk";
+import { assess, audit, DOC_COLS, type DocRow, type ProposalRow } from "./desk";
 import { extract, ExtractionError, PROMPT_VERSION } from "./extract";
 
 /** Runs the assistant on one document and stores exactly what it returned. */
 export async function runAssistant(documentId: number, actor: string): Promise<{ ok: true } | { ok: false; error: string }> {
-  const [doc] = await q<DocRow>(`select * from intake.documents where id = $1`, [documentId]);
+  const [doc] = await q<DocRow>(`select ${DOC_COLS} from intake.documents where id = $1`, [documentId]);
   if (!doc) return { ok: false, error: "Document not found." };
 
   try {
