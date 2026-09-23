@@ -35,7 +35,7 @@ The stored proposal is exactly what the model returned. The verdict is recompute
 
 **Knowledge.** SOP sections are rows with versions. Editing one inserts a new version and keeps the old, and every answer logs which section versions it used. Retrieval is Postgres full-text search with each term weighted by how rare it is across sections, so "chest pain" outweighs "patient message". Sections are short, so the model gets the top eight and cites only what answers the question.
 
-`scripts/eval-retrieval.ts` checks that the section answering each of a set of real questions is among those eight (currently 10/10). It costs nothing to run, so it runs on every SOP change. Plain word matching misses synonyms: at three sections instead of eight, "the payer denied it" does not find the section titled "Denials". When the knowledge base grows and this eval starts failing, add pgvector embeddings next to the text search and merge the two rankings; `search()` keeps its interface.
+`scripts/eval-retrieval.ts` checks that the section answering each of a set of real questions is among those eight (currently 10/10). It makes no model calls, so it is cheap enough to run on every SOP change. Plain word matching misses synonyms: at three sections instead of eight, "the payer denied it" does not find the section titled "Denials". When the knowledge base grows and this eval starts failing, add pgvector embeddings next to the text search and merge the two rankings; `search()` keeps its interface.
 
 ## Stack
 
