@@ -1,49 +1,72 @@
+/* Intake Desk. Three inks tell you who wrote what:
+   print (the document), highlighter (the assistant), ballpoint (a person). */
+
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --desk: #e3e7eb;
+  --surface: #f6f7f8;
+  --paper: #fdfdfb;
+  --ink: #161d27;
+  --ink-2: #525d6a;
+  --ink-3: #7d8792;
+  --rule: #cdd3d9;
+  --rule-soft: #dde2e6;
+
+  --pen: #1f3f8f;          /* ballpoint: people */
+  --pen-soft: #e6ecf8;
+
+  --hl-yellow: #ffe45e;    /* grounded field */
+  --hl-pink: #ff9ec4;      /* a check failed */
+  --hl-orange: #ffb45a;    /* clinical content */
+  --hl-green: #a8efb4;     /* ready */
+  --hl-blue: #a9d8ff;      /* cited SOP text */
+
+  --shadow-paper: 0 1px 0 rgba(22, 29, 39, 0.04), 0 8px 24px -12px rgba(22, 29, 39, 0.22);
+  --radius: 6px;
+  --font-ui: var(--font-public-sans), system-ui, sans-serif;
+  --font-print: var(--font-courier-prime), "Courier New", monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-html {
-  height: 100%;
-}
-
-html,
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
 body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-body {
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--desk);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 1.45;
+  font-feature-settings: "tnum" 1;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+}
+a { color: inherit; }
+button, input, select, textarea { font: inherit; color: inherit; }
+:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; border-radius: 3px; }
+
+/* The highlighter stroke: slightly uneven ends, sits behind the text like ink on paper. */
+.hl {
+  --c: var(--hl-yellow);
+  background:
+    linear-gradient(100deg, transparent 0 2px, var(--c) 3px calc(100% - 3px), transparent calc(100% - 1px));
+  background-size: 100% 78%;
+  background-position: 0 62%;
+  background-repeat: no-repeat;
+  padding: 0 2px;
+  margin: 0 -2px;
+  border-radius: 2px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+.hl-pink { --c: var(--hl-pink); }
+.hl-orange { --c: var(--hl-orange); }
+.hl-green { --c: var(--hl-green); }
+.hl-blue { --c: var(--hl-blue); }
+
+.pen { color: var(--pen); }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
-}
-
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-@media (prefers-color-scheme: dark) {
-  html {
-    color-scheme: dark;
-  }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
 }

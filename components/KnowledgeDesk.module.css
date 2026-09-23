@@ -1,0 +1,126 @@
+.wrap {
+  display: grid;
+  grid-template-columns: minmax(0, 520px) minmax(0, 640px);
+  gap: 40px;
+  justify-content: center;
+  padding: 36px 24px 64px;
+  align-items: start;
+}
+
+.askCol { position: sticky; top: 90px; }
+.askCol h1 { margin: 0 0 8px; font-size: 28px; font-weight: 800; letter-spacing: -0.025em; }
+.lede { margin: 0 0 18px; color: var(--ink-2); font-size: 14.5px; }
+
+.form { display: grid; gap: 8px; }
+.form textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: var(--paper);
+  font-size: 15px;
+}
+.form button {
+  justify-self: end;
+  border: 0;
+  border-radius: 7px;
+  background: var(--pen);
+  color: #fff;
+  font-weight: 700;
+  padding: 9px 18px;
+  cursor: pointer;
+}
+.form button:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.suggested { list-style: none; margin: 14px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.suggested button {
+  border: 1px solid var(--rule);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 5px 11px;
+  font-size: 12.5px;
+  color: var(--ink-2);
+  cursor: pointer;
+  text-align: left;
+}
+.suggested button:hover { color: var(--ink); border-color: var(--ink-3); }
+
+.answer {
+  margin-top: 22px;
+  padding: 18px 20px;
+  background: var(--paper);
+  border-radius: 8px;
+  box-shadow: var(--shadow-paper);
+}
+.askedLabel { margin: 0; font-size: 12px; font-weight: 600; color: var(--ink-3); }
+.asked { margin: 2px 0 12px; font-weight: 700; }
+.answerText { margin: 0; font-size: 15.5px; line-height: 1.55; }
+.cite {
+  display: inline-block;
+  margin: 0 2px 0 4px;
+  padding: 0 5px;
+  border: 0;
+  border-radius: 3px;
+  background: var(--hl-blue);
+  font-size: 11px;
+  font-weight: 800;
+  vertical-align: 2px;
+  cursor: pointer;
+}
+.notCovered p { margin: 0 0 6px; font-size: 14.5px; }
+.cost { margin: 12px 0 0; font-size: 12px; color: var(--ink-3); }
+.error { color: #a3164f; font-weight: 600; font-size: 13px; }
+
+.library { background: var(--surface); border: 1px solid var(--rule); border-radius: 10px; padding: 6px 24px 20px; }
+.libraryHead { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 14px 0 4px; }
+.libraryHead h2 { margin: 0; font-size: 16px; font-weight: 800; }
+.libraryHead p { margin: 0; font-size: 12px; color: var(--ink-3); text-align: right; }
+
+.sop { padding-top: 14px; border-top: 1px solid var(--rule); margin-top: 12px; }
+.sop:first-of-type { border-top: 0; }
+.sop h3 { margin: 0 0 6px; font-size: 15px; font-weight: 800; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sopId { font-size: 12px; font-weight: 700; color: var(--ink-3); }
+.owner { margin-left: auto; font-size: 11.5px; font-weight: 600; color: var(--ink-3); }
+
+.section { padding: 8px 10px; margin: 0 -10px; border-radius: 6px; scroll-margin-top: 90px; }
+.retrieved { background: rgba(169, 216, 255, 0.16); }
+.flash { animation: flash 1.2s ease; }
+@keyframes flash { 0% { background: rgba(169, 216, 255, 0.7); } 100% { background: transparent; } }
+
+.secHead { margin: 0; font-size: 13px; font-weight: 700; }
+.secNum { color: var(--ink-3); margin-right: 2px; }
+.version { margin-left: 8px; font-size: 11.5px; font-weight: 600; }
+.body { margin: 2px 0 0; font-size: 14px; color: var(--ink-2); line-height: 1.55; }
+.body mark { color: var(--ink); }
+
+.editBtn {
+  margin-left: 8px;
+  border: 0;
+  background: none;
+  color: var(--pen);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0;
+}
+.editForm { display: grid; gap: 6px; margin-top: 4px; }
+.editForm textarea {
+  width: 100%;
+  border: 1px solid var(--pen);
+  border-radius: 6px;
+  padding: 8px 10px;
+  color: var(--pen);
+  background: var(--paper);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.editForm div { display: flex; gap: 6px; }
+.editForm button { border: 1px solid var(--rule); background: var(--paper); border-radius: 6px; padding: 5px 10px; font-weight: 600; cursor: pointer; }
+.editForm button[type="submit"] { background: var(--pen); color: #fff; border-color: var(--pen); }
+
+@media (max-width: 1000px) {
+  .wrap { grid-template-columns: 1fr; padding: 24px 16px 48px; }
+  .askCol { position: static; }
+  .library { padding: 4px 16px 16px; }
+}
