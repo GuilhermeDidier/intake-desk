@@ -33,7 +33,9 @@ The stored proposal is exactly what the model returned. The verdict is recompute
 
 **Roles.** The demo has no login: pick a role in the header. Intake coordinators correct fields and route administrative documents; triage nurses take clinical ones; operations admins also edit SOPs. The server enforces this on every action. In production the role comes from the identity provider.
 
-**Knowledge.** SOP sections are rows with versions. Editing one inserts a new version and keeps the old, and every answer logs which section versions it used. Retrieval is Postgres full-text search with OR-ed terms and ranking, which is exact and free at this size. As the corpus grows into the thousands of sections, add pgvector embeddings alongside it and merge the two rankings; the `search()` interface stays the same.
+**Knowledge.** SOP sections are rows with versions. Editing one inserts a new version and keeps the old, and every answer logs which section versions it used. Retrieval is Postgres full-text search with each term weighted by how rare it is across sections, so "chest pain" outweighs "patient message". Sections are short, so the model gets the top eight and cites only what answers the question.
+
+`scripts/eval-retrieval.ts` checks that the section answering each of a set of real questions is among those eight (currently 10/10). It costs nothing to run, so it runs on every SOP change. Plain word matching misses synonyms: at three sections instead of eight, "the payer denied it" does not find the section titled "Denials". When the knowledge base grows and this eval starts failing, add pgvector embeddings next to the text search and merge the two rankings; `search()` keeps its interface.
 
 ## Stack
 
@@ -61,6 +63,7 @@ echo "ANTHROPIC_API_KEY=..." >> .env.local
 npx tsx --env-file=.env.local scripts/seed.ts                     # SOPs, documents, first reads (~$0.20)
 npm run dev
 npm test
+npx tsx --env-file=.env.local scripts/eval-retrieval.ts
 ```
 
 ## Not in this demo

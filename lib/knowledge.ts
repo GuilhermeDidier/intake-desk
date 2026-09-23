@@ -15,24 +15,34 @@ export type Section = {
 
 /**
  * Full-text retrieval over the current version of every SOP section.
- * Terms are OR-ed and ranked, so a plain question still finds the right sections.
+ * Each query term is weighted by how rare it is across sections (inverse document
+ * frequency), so "chest pain" outweighs "patient message", which is everywhere.
  * At a few dozen sections this is exact and free; past a few thousand, add pgvector
  * next to it and merge the two rankings.
  */
-export async function search(question: string, limit = 4): Promise<Section[]> {
-  const terms = (question.toLowerCase().match(/[a-z0-9]{3,}/g) ?? []).slice(0, 24);
+// Sections are short, so the model gets a generous handful: recall matters more than precision
+// here, because the model cites only what answers the question.
+export const RETRIEVE_K = 8;
+
+export async function search(question: string, limit = RETRIEVE_K): Promise<Section[]> {
+  const terms = [...new Set(question.toLowerCase().match(/[a-z0-9]{3,}/g) ?? [])].slice(0, 24);
   if (terms.length === 0) return [];
   return q<Section>(
-    `with query as (
-       select to_tsquery('english', string_agg(plainto_tsquery('english', t)::text, ' | ')) as tsq
-       from unnest($1::text[]) as t
-       where plainto_tsquery('english', t)::text <> ''
+    `with cur as (select * from intake.sop_sections where is_current),
+     terms as (
+       select distinct on (tq::text) tq
+       from (select plainto_tsquery('english', t) as tq from unnest($1::text[]) as t) x
+       where tq::text <> ''
+     ),
+     weighted as (
+       select tq, ln(((select count(*) from cur) + 1)::float / (1 + (select count(*) from cur c where c.tsv @@ tq))) as idf
+       from terms
      )
-     select s.id, s.sop_id, s.sop_title, s.n, s.heading, s.body, s.version,
-            ts_rank_cd(s.tsv, query.tsq) as rank
-     from intake.sop_sections s, query
-     where s.is_current and query.tsq is not null and s.tsv @@ query.tsq
-     order by rank desc, s.sop_id, s.n
+     select c.id, c.sop_id, c.sop_title, c.n, c.heading, c.body, c.version, sum(w.idf) as rank
+     from cur c join weighted w on c.tsv @@ w.tq
+     group by c.id, c.sop_id, c.sop_title, c.n, c.heading, c.body, c.version
+     having sum(w.idf) > 0.5
+     order by rank desc, c.sop_id, c.n
      limit $2`,
     [terms, limit],
   );
@@ -49,7 +59,7 @@ export type Answer = {
 
 const SYSTEM = `You answer questions from intake staff at an outpatient specialty clinic group, using only the SOP sections provided as documents.
 
-Answer in two to four short sentences, in plain language, starting with what the staff member should do. Every statement must be supported by the provided sections. If the sections do not answer the question, reply with exactly: NOT_COVERED
+Answer in two to four short sentences, in plain language, starting with what the staff member should do. Every statement must be supported by the provided sections. If they answer only part of the question, answer that part and leave the rest out. Do not talk about the sections, documents or citations themselves. If the sections do not answer the question at all, reply with exactly: NOT_COVERED
 
 Never give clinical advice, even if asked. If the question is clinical, say that it goes to Nurse Triage and cite the section that says so, if one is provided.`;
 
