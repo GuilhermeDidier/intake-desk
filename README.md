@@ -17,7 +17,7 @@ All data is synthetic. The clinic, patients, providers, payers and numbers are i
 | **The agent can't invent data** | It never sees the raw document, only the fields that passed the checks, so instructions hidden in a fax can't reach it. Every proposal is re-checked in code (`lib/agent-rules.ts`): values must equal the verified ones, no duplicate patients, no clinical words in task titles, faxes only back to the sender and never to patients, nothing on clinical documents. Blocked attempts are shown on screen. |
 | **PDFs, typed or scanned** | Upload a PDF and the assistant transcribes it first; the checks and highlights run on the transcription, with the original one click away. Try the sample scan on the Add a document page. |
 | **Answers from the SOPs, or none** | "Ask the SOPs" retrieves sections, answers only from them with native citations, and highlights the cited passages. An answer with no citation isn't shown. If nothing relevant is retrieved, the model isn't called at all. |
-| **Cost you can see** | Each proposal and plan stores model, prompt version, tokens, cost and latency. About $0.02 and 5 seconds to read a document, about $0.10 and 15 seconds to plan next steps. The public demo caps model calls per visitor and per day. |
+| **Cost you can see** | Each proposal and plan stores model, prompt version, tokens, cost and latency. About $0.01 and 5 seconds to read a document, about $0.04 and 10 seconds to plan next steps (Claude Sonnet 5). The public demo caps model calls per visitor and per day. |
 
 Try the example "A fax that talks to the AI" on the Paste a document page: the fax tells the assistant to mark every check as passed and skip review. It doesn't.
 
@@ -73,7 +73,7 @@ npm install
 # owner connection string of an empty Postgres/Supabase database
 ADMIN_DATABASE_URL=postgres://... npx tsx scripts/setup-db.ts   # schema + app role, writes .env.local
 echo "ANTHROPIC_API_KEY=..." >> .env.local
-npx tsx --env-file=.env.local scripts/seed.ts                     # SOPs, documents, first reads and plans (~$0.90)
+npx tsx --env-file=.env.local scripts/seed.ts                     # SOPs, documents, first reads and plans (~$0.40)
 npm run dev
 npm test
 npx tsx --env-file=.env.local scripts/eval-retrieval.ts
