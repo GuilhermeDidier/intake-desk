@@ -3,11 +3,11 @@ import { betaZodOutputFormat } from "@anthropic-ai/sdk/helpers/beta/zod";
 import { z } from "zod";
 import { DOC_TYPES, FIELD_KEYS, OPTIONAL, REQUIRED } from "./fields";
 
-export const MODEL = "claude-opus-5";
+export const MODEL = "claude-sonnet-5";
 export const PROMPT_VERSION = "extract-v3";
-// USD per million tokens, claude-opus-5.
-const PRICE_IN = 5;
-const PRICE_OUT = 25;
+// USD per million tokens, claude-sonnet-5.
+const PRICE_IN = 2;
+const PRICE_OUT = 10;
 
 export const ExtractionSchema = z.object({
   doc_type: z.enum(DOC_TYPES),
