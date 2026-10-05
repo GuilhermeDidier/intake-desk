@@ -1,5 +1,11 @@
 # Intake Desk
 
+[![CI](https://github.com/GuilhermeDidier/intake-desk/actions/workflows/ci.yml/badge.svg)](https://github.com/GuilhermeDidier/intake-desk/actions/workflows/ci.yml)
+
+**Live demo: [intake-desk-demo.vercel.app](https://intake-desk-demo.vercel.app)**
+
+![A referral fax where the referring NPI fails the check-digit test, so the document is held for review](docs/screenshot.png)
+
 Document triage for the intake desk of an outpatient clinic group. Faxes, portal forms and emails arrive; an AI assistant reads each one and extracts the index fields; rules written from the clinic's SOPs decide where it goes; a person approves. Every value on screen traces back to the exact place in the document it came from.
 
 All data is synthetic. The clinic, patients, providers, payers and numbers are invented.
