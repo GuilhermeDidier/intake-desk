@@ -187,7 +187,7 @@ export function NewDocumentForm({ allowed }: { allowed: boolean }) {
           ) : (
             <p className={s.blocked}>Switch to Intake coordinator or Operations admin to send documents.</p>
           )}
-          {!pdfName && <span className={s.count}>{body.length.toLocaleString()} / 6,000</span>}
+          {!pdfName && <span className={s.count}>{body.length.toLocaleString("en-US")} / 6,000</span>}
         </div>
         {state && !state.ok && (
           <p className={s.error} role="alert">

@@ -332,7 +332,7 @@ function Reading({ data, active, onFocus }: { data: WorkbenchData; active: strin
           <dt>Model</dt>
           <dd>{proposal.model}, prompt {proposal.promptVersion}</dd>
           <dt>Tokens</dt>
-          <dd>{proposal.inputTokens.toLocaleString()} in · {proposal.outputTokens.toLocaleString()} out</dd>
+          <dd>{proposal.inputTokens.toLocaleString("en-US")} in · {proposal.outputTokens.toLocaleString("en-US")} out</dd>
           <dt>Cost</dt>
           <dd>${proposal.costUsd.toFixed(4)} · {(proposal.latencyMs / 1000).toFixed(1)} s</dd>
           <dt>Decided by</dt>
